@@ -1,0 +1,105 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Teacher {
+  id           String             @id @default(uuid())
+  name         String
+  email        String             @unique
+  passwordHash String
+  collegeName  String
+  phone        String?            // Teacher's verified caller phone number (+91XXXXXXXXXX)
+  isVerified   Boolean            @default(false)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  students     Student[]
+  attendance   Attendance[]
+  calls        Call[]
+  devices      SimGatewayDevice[]
+
+  @@map("teachers")
+}
+
+model Student {
+  id          String       @id @default(uuid())
+  teacherId   String
+  teacher     Teacher      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  name        String
+  rollNumber  String
+  course      String
+  year        String
+  section     String
+  parentName  String
+  parentPhone String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  attendance  Attendance[]
+  calls       Call[]
+
+  @@unique([teacherId, rollNumber])
+  @@map("students")
+}
+
+model Attendance {
+  id        String   @id @default(uuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacherId String
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  date      String   // Formatted as YYYY-MM-DD
+  status    String   // 'Present' | 'Absent'
+  createdAt DateTime @default(now())
+  calls     Call[]
+
+  @@unique([studentId, date])
+  @@map("attendance")
+}
+
+model SimGatewayDevice {
+  id          String   @id @default(uuid())
+  deviceId    String   @unique
+  deviceToken String
+  deviceName  String?  @default("Android Phone")
+  teacherId   String
+  teacher     Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  phoneNumber String?  // SIM Mobile number +91XXXXXXXXXX
+  status      String   @default("OFFLINE") // 'ONLINE' | 'OFFLINE' | 'BUSY'
+  lastSeen    DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  calls       Call[]
+
+  @@map("sim_gateway_devices")
+}
+
+model Call {
+  id             String            @id @default(uuid())
+  studentId      String
+  student        Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacherId      String
+  teacher        Teacher           @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  attendanceId   String?
+  attendance     Attendance?       @relation(fields: [attendanceId], references: [id], onDelete: SetNull)
+  deviceId       String?
+  device         SimGatewayDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  parentPhone    String
+  teacherPhone   String?
+  callingMethod  String            @default("PERSONAL_SIM") // 'PERSONAL_SIM' | 'DEMO'
+  provider       String            @default("PERSONAL_SIM") // legacy field fallback
+  providerCallId String?           // Device Call SID / Reference
+  status         String            // 'REQUESTED' | 'DEVICE_RECEIVED' | 'DIALING' | 'RINGING' | 'ANSWERED' | 'AI_CONNECTED' | 'LISTENING' | 'SPEAKING' | 'COMPLETED' | 'FAILED' | 'NO_ANSWER' | 'BUSY'
+  duration       Int               @default(0)
+  transcript     String?
+  parentResponse String?
+  createdAt      DateTime          @default(now())
+  startedAt      DateTime?
+  completedAt    DateTime?
+
+  @@map("calls")
+}
+
