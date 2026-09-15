@@ -1,10 +1,13 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
-// Fallback DATABASE_URL if not set in Vercel environment variables
-if (!process.env.DATABASE_URL || process.env.DATABASE_URL.trim() === '') {
-  // Use writable /tmp directory on Vercel serverless functions, or local relative path
-  process.env.DATABASE_URL = process.env.VERCEL ? 'file:/tmp/dev.db' : 'file:./dev.db';
-}
+// Detect Vercel serverless environment (where root filesystem is read-only)
+const isVercel = Boolean(process.env.VERCEL || process.env.NEXT_PUBLIC_VERCEL_ENV || process.env.NOW_BUILDER);
+const targetDbUrl = process.env.DATABASE_URL && process.env.DATABASE_URL.trim() !== ''
+  ? process.env.DATABASE_URL
+  : (isVercel ? 'file:/tmp/dev.db' : 'file:./dev.db');
+
+process.env.DATABASE_URL = targetDbUrl;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
@@ -14,6 +17,11 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
+    datasources: {
+      db: {
+        url: targetDbUrl,
+      },
+    },
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
   });
 
@@ -21,7 +29,7 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 let initPromise: Promise<void> | null = null;
 
-// Helper to guarantee SQLite database tables exist BEFORE executing queries on Vercel/Serverless
+// Helper to guarantee SQLite database tables & demo user exist BEFORE queries execute
 export async function ensureDbInitialized() {
   if (globalForPrisma.initialized) return;
 
@@ -119,9 +127,47 @@ export async function ensureDbInitialized() {
         await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "attendance_studentId_date_key" ON "attendance"("studentId", "date");`);
         await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "sim_gateway_devices_deviceId_key" ON "sim_gateway_devices"("deviceId");`);
 
+        // Seed default demo teacher if table is empty
+        const existingTeacher = await prisma.teacher.findFirst();
+        if (!existingTeacher) {
+          const passwordHash = await bcrypt.hash('password123', 10);
+          const demoTeacher = await prisma.teacher.create({
+            data: {
+              id: 'demo-teacher-id-01',
+              name: 'Dr. K. Srimannarayana',
+              email: 'teacher@mallareddy.edu',
+              passwordHash,
+              collegeName: 'Malla Reddy University',
+              isVerified: true,
+            },
+          });
+
+          const sampleStudent = await prisma.student.create({
+            data: {
+              name: 'Rahul Kumar',
+              rollNumber: '23CSE101',
+              course: 'B.Tech CSE',
+              year: '2nd Year',
+              section: 'A',
+              parentName: 'Ramesh Kumar',
+              parentPhone: '+919876543210',
+              teacherId: demoTeacher.id,
+            },
+          });
+
+          await prisma.attendance.create({
+            data: {
+              studentId: sampleStudent.id,
+              teacherId: demoTeacher.id,
+              date: new Date().toISOString().split('T')[0],
+              status: 'Absent',
+            },
+          });
+        }
+
         globalForPrisma.initialized = true;
       } catch (err) {
-        console.error('Prisma auto-table init error:', err);
+        console.error('Prisma auto-table init notice:', err);
       }
     })();
   }
