@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { prisma } from '@/lib/prisma';
+import { prisma, ensureDbInitialized } from '@/lib/prisma';
 import { signToken } from '@/lib/auth/jwt';
 import { COOKIE_NAME } from '@/lib/auth/session';
 
 export async function POST(request: Request) {
   try {
+    await ensureDbInitialized();
+
     const body = await request.json();
     const { name, email, password, collegeName } = body;
 
