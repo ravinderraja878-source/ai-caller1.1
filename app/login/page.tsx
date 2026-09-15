@@ -2,17 +2,31 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bot, Mail, Lock, Building, User, ArrowRight, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Bot, Mail, Lock, Building, User, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const [isRegister, setIsRegister] = useState(false);
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('teacher@mallareddy.edu');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [collegeName, setCollegeName] = useState('Malla Reddy University');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const handleSwitchTab = (toRegister: boolean) => {
+    setIsRegister(toRegister);
+    setError(null);
+    if (!toRegister) {
+      // Demo credentials for sign-in tab
+      setEmail('teacher@mallareddy.edu');
+      setPassword('password123');
+    } else {
+      // Clear fields for register tab
+      setEmail('');
+      setPassword('');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +54,7 @@ export default function LoginPage() {
       router.push('/dashboard');
       router.refresh();
     } catch (err: any) {
-      setError(err.message || 'An error occurred during sign in.');
+      setError(err.message || 'An error occurred during authentication.');
     } finally {
       setLoading(false);
     }
@@ -68,10 +82,8 @@ export default function LoginPage() {
         <div className="bg-slate-900/90 backdrop-blur-xl py-8 px-6 sm:px-10 shadow-2xl rounded-3xl border border-slate-800">
           <div className="flex items-center justify-between mb-6 border-b border-slate-800 pb-4">
             <button
-              onClick={() => {
-                setIsRegister(false);
-                setError(null);
-              }}
+              type="button"
+              onClick={() => handleSwitchTab(false)}
               className={`pb-2 text-sm font-bold transition-colors ${
                 !isRegister
                   ? 'text-indigo-400 border-b-2 border-indigo-500'
@@ -81,10 +93,8 @@ export default function LoginPage() {
               Sign In
             </button>
             <button
-              onClick={() => {
-                setIsRegister(true);
-                setError(null);
-              }}
+              type="button"
+              onClick={() => handleSwitchTab(true)}
               className={`pb-2 text-sm font-bold transition-colors ${
                 isRegister
                   ? 'text-indigo-400 border-b-2 border-indigo-500'
@@ -115,7 +125,7 @@ export default function LoginPage() {
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Dr. K. Srimannarayana"
+                      placeholder="Raja Raveendra kumar"
                       className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm font-medium"
                     />
                   </div>
@@ -151,7 +161,7 @@ export default function LoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="teacher@mallareddy.edu"
+                  placeholder={isRegister ? "yourname@gmail.com" : "teacher@mallareddy.edu"}
                   className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm font-medium"
                 />
               </div>
@@ -195,8 +205,9 @@ export default function LoginPage() {
             <p className="font-semibold text-slate-300 flex items-center gap-1.5">
               <ShieldCheck className="h-4 w-4 text-emerald-400" /> Default Demo Account Credentials:
             </p>
-            <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-slate-300">
-              Email: <span className="text-indigo-400">teacher@mallareddy.edu</span> | Password: <span className="text-indigo-400">password123</span>
+            <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-slate-300 flex justify-between items-center">
+              <span>Email: <strong className="text-indigo-400">teacher@mallareddy.edu</strong></span>
+              <span>Pass: <strong className="text-indigo-400">password123</strong></span>
             </div>
           </div>
         </div>
