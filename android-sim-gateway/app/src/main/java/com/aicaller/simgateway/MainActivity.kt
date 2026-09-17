@@ -74,14 +74,17 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        try {
+            setContentView(R.layout.activity_main)
+            preferenceManager = PreferenceManager(this)
 
-        preferenceManager = PreferenceManager(this)
-
-        initViews()
-        loadSavedConfig()
-        checkAndRequestPermissions()
-        refreshDeviceInfo()
+            initViews()
+            loadSavedConfig()
+            checkAndRequestPermissions()
+            refreshDeviceInfo()
+        } catch (e: Throwable) {
+            android.util.Log.e("MainActivity", "Fatal error in onCreate: ${e.message}")
+        }
     }
 
     private fun initViews() {
