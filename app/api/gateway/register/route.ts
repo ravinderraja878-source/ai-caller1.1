@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, ensureDbInitialized } from '@/lib/prisma';
 import crypto from 'crypto';
 
 // POST /api/gateway/register - Secure Android Device Registration & Pairing
 export async function POST(request: Request) {
   try {
+    await ensureDbInitialized();
     const body = await request.json();
     const { teacherId, email, deviceName, phoneNumber, simNumber, deviceId: incomingDeviceId, deviceModel } = body;
     const phone = phoneNumber || simNumber;

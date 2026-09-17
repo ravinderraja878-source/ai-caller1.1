@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, ensureDbInitialized } from '@/lib/prisma';
 
 // POST /api/gateway/heartbeat - Android Gateway status & heartbeat update
 export async function POST(request: Request) {
   try {
+    await ensureDbInitialized();
     const body = await request.json();
     const { deviceId, deviceToken, teacherId, status = 'ONLINE', phoneNumber, simNumber } = body;
     const phone = phoneNumber || simNumber;
