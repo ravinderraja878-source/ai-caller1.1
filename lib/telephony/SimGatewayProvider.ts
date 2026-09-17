@@ -84,8 +84,8 @@ export class SimGatewayProvider implements TelephonyProvider {
       };
     }
 
-    // If call is already completed or failed, return recorded status
-    if (call.status === 'COMPLETED' || call.status === 'FAILED' || call.status === 'BUSY' || call.status === 'NO_ANSWER') {
+    // If call status has been updated by Android SIM Gateway APK app or is terminal, respect device status
+    if (call.status !== 'REQUESTED') {
       return {
         providerCallId: call.providerCallId || call.id,
         status: call.status,
@@ -95,7 +95,7 @@ export class SimGatewayProvider implements TelephonyProvider {
       };
     }
 
-    // Calculate progression based on elapsed time since creation/startedAt
+    // Calculate progression fallback based on elapsed time since creation/startedAt
     const startMs = call.startedAt ? new Date(call.startedAt).getTime() : new Date(call.createdAt).getTime();
     const elapsedMs = Date.now() - startMs;
     const durationSec = Math.floor(elapsedMs / 1000);
