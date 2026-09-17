@@ -57,25 +57,7 @@ class SimGatewayService : Service() {
         try {
             val notification = createNotification("Initializing Gateway Service...")
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                try {
-                    startForeground(
-                        NOTIFICATION_ID,
-                        notification,
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL or ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-                    )
-                } catch (e: Throwable) {
-                    try {
-                        startForeground(
-                            NOTIFICATION_ID,
-                            notification,
-                            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-                        )
-                    } catch (e2: Throwable) {
-                        startForeground(NOTIFICATION_ID, notification)
-                    }
-                }
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 try {
                     startForeground(
                         NOTIFICATION_ID,
@@ -83,7 +65,11 @@ class SimGatewayService : Service() {
                         ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
                     )
                 } catch (e: Throwable) {
-                    startForeground(NOTIFICATION_ID, notification)
+                    try {
+                        startForeground(NOTIFICATION_ID, notification)
+                    } catch (e2: Throwable) {
+                        Log.e(TAG, "Fallback startForeground failed: ${e2.message}")
+                    }
                 }
             } else {
                 startForeground(NOTIFICATION_ID, notification)
