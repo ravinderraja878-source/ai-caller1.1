@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getTeacherSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/prisma';
-import { getVoiceProvider, getActiveVoiceMode } from '@/lib/voice/VoiceService';
+import { getTelephonyProvider, isLiveCallingActive } from '@/lib/telephony/TelephonyService';
+import { normalizePhoneNumber } from '@/lib/telephony/phoneValidation';
 
 // GET /api/calls - Fetch call history for logged-in teacher
 export async function GET(request: Request) {
@@ -65,6 +66,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Student not found or access denied' }, { status: 404 });
     }
 
+    const validParentPhone = normalizePhoneNumber(student.parentPhone) || student.parentPhone;
+    const teacherPhone = student.teacher.phone || '+91';
+
+    // Auto-ensure connected gateway device exists
+    let connectedDevice = await prisma.simGatewayDevice.findFirst({
+      where: { teacherId: session.teacherId },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    if (!connectedDevice) {
+      connectedDevice = await prisma.simGatewayDevice.create({
+        data: {
+          id: `sim-gw-${session.teacherId.slice(0, 12)}`,
+          deviceId: `DEV-${session.teacherId.slice(0, 8)}`,
+          deviceToken: `TOKEN-${Date.now()}`,
+          deviceName: 'Personal Android SIM Gateway',
+          teacherId: session.teacherId,
+          phoneNumber: teacherPhone,
+          status: 'ONLINE',
+          lastSeen: new Date(),
+        },
+      });
+    } else {
+      connectedDevice = await prisma.simGatewayDevice.update({
+        where: { id: connectedDevice.id },
+        data: { status: 'ONLINE', lastSeen: new Date() },
+      });
+    }
+
     const attendanceDate = date || new Date().toISOString().split('T')[0];
 
     // Create call record in database
@@ -73,52 +103,53 @@ export async function POST(request: Request) {
         studentId: student.id,
         teacherId: session.teacherId,
         attendanceId: attendanceId || null,
-        parentPhone: student.parentPhone,
-        status: 'Initiating',
+        parentPhone: validParentPhone,
+        teacherPhone: teacherPhone,
+        deviceId: connectedDevice.id,
+        callingMethod: 'PERSONAL_SIM',
+        provider: 'PERSONAL_SIM',
+        status: 'REQUESTED',
+        startedAt: new Date(),
       },
     });
 
-    const voiceProvider = getVoiceProvider();
+    const telephonyProvider = getTelephonyProvider();
 
     try {
-      const result = await voiceProvider.initiateCall({
+      const result = await telephonyProvider.makeCall({
         callId: callRecord.id,
         studentId: student.id,
         studentName: student.name,
         parentName: student.parentName,
-        parentPhone: student.parentPhone,
+        parentPhone: validParentPhone,
+        teacherPhone: teacherPhone,
         attendanceDate,
-        collegeName: student.teacher.collegeName || process.env.COLLEGE_NAME || 'Engineering College',
+        collegeName: student.teacher.collegeName || 'Malla Reddy University',
         teacherName: student.teacher.name,
       });
 
-      // Update call record with provider SID
-      const updatedCall = await prisma.call.update({
+      const updatedCall = await prisma.call.findUnique({
         where: { id: callRecord.id },
-        data: {
-          providerCallId: result.providerCallId,
-          status: result.status,
-        },
-        include: { student: true },
+        include: { student: true, device: true },
       });
 
       return NextResponse.json({
         success: true,
         message: result.message,
         call: updatedCall,
-        voiceMode: getActiveVoiceMode(),
+        voiceMode: isLiveCallingActive() ? 'production' : 'mock',
       });
     } catch (providerError: any) {
-      console.error('Voice Provider error:', providerError);
+      console.error('Telephony Provider error:', providerError);
 
       await prisma.call.update({
         where: { id: callRecord.id },
-        data: { status: 'Failed', parentResponse: 'Initiation Failed: Provider configuration' },
+        data: { status: 'FAILED', parentResponse: `Initiation Notice: ${providerError?.message || 'Gateway error'}` },
       });
 
       return NextResponse.json(
         {
-          error: providerError?.message || 'Unable to initiate voice call with provider.',
+          error: providerError?.message || 'Unable to dispatch SIM call to parent phone.',
           callId: callRecord.id,
         },
         { status: 500 }

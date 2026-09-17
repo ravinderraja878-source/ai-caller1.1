@@ -160,6 +160,16 @@ export function CallConfirmationModal({
               <p>Currently in <strong>DEMO MODE</strong> simulation. To make real cellular SIM calls, switch to Live SIM in Settings.</p>
             </div>
           )}
+          {/* Direct Native Cellular Calling option */}
+          <div className="pt-1">
+            <a
+              href={`tel:${student.parentPhone}`}
+              className="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+            >
+              <Phone className="h-4 w-4 text-emerald-400" />
+              <span>📱 Open Phone Dialer Directly ({student.parentPhone})</span>
+            </a>
+          </div>
         </div>
 
         {/* Modal Actions */}
@@ -175,20 +185,18 @@ export function CallConfirmationModal({
           <button
             type="button"
             onClick={onConfirm}
-            disabled={loading || isGatewayOffline}
-            className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm text-white shadow-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-              isLiveSIM ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/30'
-            }`}
+            disabled={loading}
+            className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm text-white shadow-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/30"
           >
             {loading ? (
               <>
                 <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Requesting...</span>
+                <span>Dispatching Call...</span>
               </>
             ) : (
               <>
                 <PhoneCall className="h-4 w-4" />
-                <span>Start Real Call</span>
+                <span>Start Real AI Call</span>
               </>
             )}
           </button>

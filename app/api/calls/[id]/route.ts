@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getTeacherSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/prisma';
-import { getVoiceProvider } from '@/lib/voice/VoiceService';
+import { getTelephonyProvider } from '@/lib/telephony/TelephonyService';
 
 // GET /api/calls/[id] - Fetch call details and sync latest call status
 export async function GET(
@@ -21,6 +21,7 @@ export async function GET(
       include: {
         student: true,
         attendance: true,
+        device: true,
       },
     });
 
@@ -28,10 +29,13 @@ export async function GET(
       return NextResponse.json({ error: 'Call record not found or access denied' }, { status: 404 });
     }
 
-    // Sync status with voice provider if providerCallId exists
-    if (call.providerCallId && call.status !== 'Completed' && call.status !== 'Failed' && call.status !== 'No Answer') {
-      const voiceProvider = getVoiceProvider();
-      const latestStatus = await voiceProvider.getCallStatus(call.providerCallId);
+    const upperStatus = call.status ? call.status.toUpperCase() : '';
+    const isTerminal = ['COMPLETED', 'FAILED', 'BUSY', 'NO_ANSWER'].includes(upperStatus);
+
+    // Sync status with telephony provider if not terminal
+    if (!isTerminal) {
+      const telephonyProvider = getTelephonyProvider();
+      const latestStatus = await telephonyProvider.getCallStatus(call.providerCallId || call.id);
 
       const updateData: any = {
         status: latestStatus.status,
@@ -44,7 +48,7 @@ export async function GET(
       if (latestStatus.parentResponse) {
         updateData.parentResponse = latestStatus.parentResponse;
       }
-      if (latestStatus.status === 'Completed' && !call.completedAt) {
+      if ((latestStatus.status === 'COMPLETED' || latestStatus.status === 'Completed') && !call.completedAt) {
         updateData.completedAt = new Date();
       }
 
@@ -54,6 +58,7 @@ export async function GET(
         include: {
           student: true,
           attendance: true,
+          device: true,
         },
       });
 

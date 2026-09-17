@@ -168,8 +168,14 @@ export function LiveVoiceCallWidget({
       </div>
 
       {/* Footer Controls */}
-      <div className="pt-2 flex items-center justify-between border-t border-slate-800">
-        <span className="text-xs text-slate-400">Personal SIM Gateway</span>
+      <div className="pt-2 flex items-center justify-between border-t border-slate-800 gap-2">
+        <a
+          href={`tel:${parentPhone}`}
+          className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all"
+        >
+          <PhoneCall className="h-3.5 w-3.5" />
+          <span>📱 Dial Parent ({parentPhone})</span>
+        </a>
         <button
           onClick={onClose}
           className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200"
