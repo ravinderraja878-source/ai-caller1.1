@@ -3,9 +3,15 @@ import bcrypt from 'bcryptjs';
 
 // Detect Vercel serverless environment (where root filesystem is read-only)
 const isVercel = Boolean(process.env.VERCEL || process.env.NEXT_PUBLIC_VERCEL_ENV || process.env.NOW_BUILDER);
-const targetDbUrl = process.env.DATABASE_URL && process.env.DATABASE_URL.trim() !== ''
+
+// On Vercel, SQLite must use /tmp/dev.db because current directory is read-only at runtime
+let targetDbUrl = process.env.DATABASE_URL && process.env.DATABASE_URL.trim() !== ''
   ? process.env.DATABASE_URL
   : (isVercel ? 'file:/tmp/dev.db' : 'file:./dev.db');
+
+if (isVercel && (targetDbUrl.startsWith('file:.') || targetDbUrl === 'file:./dev.db')) {
+  targetDbUrl = 'file:/tmp/dev.db';
+}
 
 process.env.DATABASE_URL = targetDbUrl;
 
@@ -166,7 +172,7 @@ export async function ensureDbInitialized() {
         }
 
         globalForPrisma.initialized = true;
-      } catch (err) {
+      } catch (err: any) {
         console.error('Prisma auto-table init notice:', err);
       }
     })();
@@ -174,3 +180,4 @@ export async function ensureDbInitialized() {
 
   await initPromise;
 }
+
