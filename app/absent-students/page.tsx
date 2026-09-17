@@ -81,15 +81,6 @@ export default function AbsentStudentsPage() {
     try {
       setCallInitiating(true);
 
-      // Trigger native phone dialer directly to parent phone number
-      if (typeof window !== 'undefined' && selectedStudentForCall.parentPhone) {
-        try {
-          window.open(`tel:${selectedStudentForCall.parentPhone}`, '_self');
-        } catch (e) {
-          console.log('Native dialer trigger note:', e);
-        }
-      }
-
       const res = await fetch('/api/calls/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

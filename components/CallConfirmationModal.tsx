@@ -160,15 +160,15 @@ export function CallConfirmationModal({
               <p>Currently in <strong>DEMO MODE</strong> simulation. To make real cellular SIM calls, switch to Live SIM in Settings.</p>
             </div>
           )}
-          {/* Direct Native Cellular Calling option */}
+          {/* AI SIM Gateway APK Notice */}
           <div className="pt-1">
-            <a
-              href={`tel:${student.parentPhone}`}
-              className="w-full py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
-            >
-              <Phone className="h-4 w-4 text-emerald-400" />
-              <span>📱 Open Phone Dialer Directly ({student.parentPhone})</span>
-            </a>
+            <div className="w-full py-2.5 px-3.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-200 font-bold text-xs flex items-center justify-between gap-2 shadow-sm">
+              <span className="flex items-center gap-2">
+                <Smartphone className="h-4 w-4 text-emerald-400 shrink-0" />
+                <span>AI SIM Gateway App Bridge</span>
+              </span>
+              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-mono text-[10px]">ACTIVE</span>
+            </div>
           </div>
         </div>
 
