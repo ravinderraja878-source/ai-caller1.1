@@ -7,7 +7,16 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get(COOKIE_NAME)?.value;
   const { pathname } = request.nextUrl;
 
-  const publicRoutes = ['/login', '/register', '/api/auth/login', '/api/auth/register', '/api/voice/webhook', '/api/voice/status', '/api/voice/response'];
+  const publicRoutes = [
+    '/login',
+    '/register',
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/voice/webhook',
+    '/api/voice/status',
+    '/api/voice/response',
+    '/api/gateway',
+  ];
   const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
 
   if (!token && !isPublicRoute && pathname !== '/') {

@@ -1,5 +1,6 @@
 package com.aicaller.simgateway
 
+import android.util.Log
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -55,10 +56,13 @@ class ApiClient(private var baseUrl: String) {
                     val responseStr = response.body?.string() ?: "{}"
                     JSONObject(responseStr)
                 } else {
+                    Log.e("ApiClient", "registerDevice failed: ${response.code} ${response.message}")
+                    Log.e("ApiClient", "Response body: ${response.body?.string()}")
                     null
                 }
             }
         } catch (e: Exception) {
+            Log.e("ApiClient", "registerDevice exception: ${e.message}")
             null
         }
     }
@@ -92,10 +96,13 @@ class ApiClient(private var baseUrl: String) {
                     val responseStr = response.body?.string() ?: "{}"
                     JSONObject(responseStr)
                 } else {
+                    Log.e("ApiClient", "registerDevice failed: ${response.code} ${response.message}")
+                    Log.e("ApiClient", "Response body: ${response.body?.string()}")
                     null
                 }
             }
         } catch (e: Exception) {
+            Log.e("ApiClient", "registerDevice exception: ${e.message}")
             null
         }
     }
@@ -113,10 +120,13 @@ class ApiClient(private var baseUrl: String) {
                     val responseStr = response.body?.string() ?: "{}"
                     JSONObject(responseStr)
                 } else {
+                    Log.e("ApiClient", "registerDevice failed: ${response.code} ${response.message}")
+                    Log.e("ApiClient", "Response body: ${response.body?.string()}")
                     null
                 }
             }
         } catch (e: Exception) {
+            Log.e("ApiClient", "registerDevice exception: ${e.message}")
             null
         }
     }
