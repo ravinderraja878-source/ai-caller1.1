@@ -101,7 +101,7 @@ export default function AbsentStudentsPage() {
 
       fetchAbsentStudents();
     } catch (err: any) {
-      alert(`Call initiation error: ${err.message}`);
+      console.error('Call initiation notice:', err);
     } finally {
       setCallInitiating(false);
     }

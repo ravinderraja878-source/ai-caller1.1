@@ -69,6 +69,19 @@ export async function POST(request: Request) {
     const validParentPhone = normalizePhoneNumber(student.parentPhone) || student.parentPhone;
     const teacherPhone = student.teacher.phone || '+91';
 
+    // Clear any prior active call records for this student to allow instant new call dispatch
+    await prisma.call.updateMany({
+      where: {
+        studentId: student.id,
+        teacherId: session.teacherId,
+        status: { in: ['REQUESTED', 'DEVICE_RECEIVED', 'DIALING', 'RINGING', 'ANSWERED', 'AI_CONNECTED', 'LISTENING', 'SPEAKING', 'Initiating'] },
+      },
+      data: {
+        status: 'COMPLETED',
+        completedAt: new Date(),
+      },
+    });
+
     // Auto-ensure connected gateway device exists
     let connectedDevice = await prisma.simGatewayDevice.findFirst({
       where: { teacherId: session.teacherId },

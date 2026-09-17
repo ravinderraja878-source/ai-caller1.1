@@ -35,18 +35,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid parent mobile number.' }, { status: 400 });
     }
 
-    // 3. Check for active calls in progress
-    const activeCall = await prisma.call.findFirst({
+    // 3. Clear any prior active call records for this student to allow instant new call dispatch
+    await prisma.call.updateMany({
       where: {
         studentId: student.id,
         teacherId: session.teacherId,
-        status: { in: ['REQUESTED', 'DEVICE_RECEIVED', 'DIALING', 'RINGING', 'ANSWERED', 'AI_CONNECTED', 'LISTENING', 'SPEAKING'] },
+        status: { in: ['REQUESTED', 'DEVICE_RECEIVED', 'DIALING', 'RINGING', 'ANSWERED', 'AI_CONNECTED', 'LISTENING', 'SPEAKING', 'Initiating'] },
+      },
+      data: {
+        status: 'COMPLETED',
+        completedAt: new Date(),
       },
     });
-
-    if (activeCall) {
-      return NextResponse.json({ error: 'Call already in progress for this student.' }, { status: 409 });
-    }
 
     // 4. Retrieve teacher's personal SIM number
     const teacherPhone = student.teacher.phone || null;
