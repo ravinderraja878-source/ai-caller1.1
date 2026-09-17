@@ -219,6 +219,21 @@ export default function ProfilePage() {
               <form onSubmit={handleUpdateProfile} className="space-y-4 text-xs">
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Fixed Faculty Teacher ID
+                  </label>
+                  <input
+                    type="text"
+                    readOnly
+                    value={teacher?.id || 'FAC-2026-LOADING'}
+                    className="w-full p-3 bg-slate-100 border border-slate-200 rounded-xl text-sm font-mono font-extrabold text-indigo-700 cursor-not-allowed"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Unique fixed Faculty ID assigned to your account for SIM Gateway pairing and record tracking.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
                     Faculty Name
                   </label>
                   <input

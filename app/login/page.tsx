@@ -24,6 +24,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [isRegister, setIsRegister] = useState(false);
   const [name, setName] = useState('');
+  const [teacherId, setTeacherId] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [collegeName, setCollegeName] = useState('Malla Reddy University');
@@ -74,7 +75,7 @@ export default function LoginPage() {
 
     const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
     const payload = isRegister
-      ? { name, email, password, collegeName }
+      ? { name, email, password, collegeName, teacherId }
       : { email, password, rememberMe };
 
     try {
@@ -297,6 +298,22 @@ export default function LoginPage() {
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Dr. K. Srimannarayana"
                         className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm font-medium transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                      Faculty Teacher ID <span className="text-slate-500 text-[10px] font-normal lowercase">(auto-generated if left empty)</span>
+                    </label>
+                    <div className="relative">
+                      <ShieldCheck className="h-5 w-5 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={teacherId}
+                        onChange={(e) => setTeacherId(e.target.value)}
+                        placeholder="e.g. FAC-2026-89402"
+                        className="w-full pl-11 pr-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm font-medium transition-all font-mono"
                       />
                     </div>
                   </div>

@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     await ensureDbInitialized();
 
     const body = await request.json();
-    const { name, email, password, collegeName } = body;
+    const { name, email, password, collegeName, teacherId: inputTeacherId } = body;
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: 'Faculty name is required' }, { status: 400 });
@@ -40,9 +40,17 @@ export async function POST(request: Request) {
     // Hash password securely
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create new Teacher account
+    // Generate fixed Faculty Teacher ID format: FAC-2026-XXXXX
+    const year = new Date().getFullYear();
+    const randomSuffix = Math.floor(10000 + Math.random() * 90000);
+    const fixedTeacherId = inputTeacherId && inputTeacherId.trim()
+      ? inputTeacherId.trim().toUpperCase()
+      : `FAC-${year}-${randomSuffix}`;
+
+    // Create new Teacher account with fixed Teacher ID
     const teacher = await prisma.teacher.create({
       data: {
+        id: fixedTeacherId,
         name: name.trim(),
         email: normalizedEmail,
         passwordHash,

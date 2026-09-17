@@ -139,7 +139,7 @@ export async function ensureDbInitialized() {
           const passwordHash = await bcrypt.hash('password123', 10);
           const demoTeacher = await prisma.teacher.create({
             data: {
-              id: 'demo-teacher-id-01',
+              id: 'FAC-2026-10001',
               name: 'Dr. K. Srimannarayana',
               email: 'teacher@mallareddy.edu',
               passwordHash,
