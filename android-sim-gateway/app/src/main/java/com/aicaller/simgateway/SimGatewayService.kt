@@ -54,33 +54,42 @@ class SimGatewayService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val notification = createNotification("Initializing Gateway Service...")
+        try {
+            val notification = createNotification("Initializing Gateway Service...")
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                    startForeground(
-                        NOTIFICATION_ID,
-                        notification,
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-                    )
-                } else {
-                    startForeground(
-                        NOTIFICATION_ID,
-                        notification,
-                        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to start foreground service with specific types: ${e.message}")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 try {
-                    startForeground(NOTIFICATION_ID, notification)
-                } catch (e2: Exception) {
-                    Log.e(TAG, "Fallback startForeground failed: ${e2.message}")
+                    startForeground(
+                        NOTIFICATION_ID,
+                        notification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL or ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                    )
+                } catch (e: Throwable) {
+                    try {
+                        startForeground(
+                            NOTIFICATION_ID,
+                            notification,
+                            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                        )
+                    } catch (e2: Throwable) {
+                        startForeground(NOTIFICATION_ID, notification)
+                    }
                 }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                try {
+                    startForeground(
+                        NOTIFICATION_ID,
+                        notification,
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                    )
+                } catch (e: Throwable) {
+                    startForeground(NOTIFICATION_ID, notification)
+                }
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
             }
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+        } catch (e: Throwable) {
+            Log.e(TAG, "Foreground service start exception: ${e.message}")
         }
 
         serverUrl = intent?.getStringExtra("serverUrl") ?: preferenceManager.getServerUrl()
@@ -120,64 +129,74 @@ class SimGatewayService : Service() {
                 log("✓ Physical SIM Card Ready (${simInfo.carrierName})")
             }
 
-            log("Registering device gateway with backend...")
-            val regRes = apiClient.registerDevice(teacherId, deviceId, simNumber)
+            var loopCount = 0
 
-            if (regRes != null && (regRes.optBoolean("success") || regRes.has("deviceId"))) {
-                val token = regRes.optString("deviceToken", "")
-                if (token.isNotEmpty()) {
-                    preferenceManager.saveDeviceToken(token)
-                }
-                log("🟢 DEVICE ONLINE & REGISTERED! Gateway ID: $deviceId")
-                notifyStatus("ONLINE")
-                updateNotification("ONLINE • Gateway connected & listening")
+            while (isRunning && isActive) {
+                try {
+                    // Step 1: Register Device with backend if not already registered/token set
+                    log("Connecting device gateway with backend...")
+                    val regRes = apiClient.registerDevice(teacherId, deviceId, simNumber)
 
-                var loopCount = 0
-
-                while (isRunning && isActive) {
-                    try {
-                        val battery = SimUtils.getBatteryLevel(this@SimGatewayService)
-                        val netInfo = SimUtils.getNetworkInformation(this@SimGatewayService)
-
-                        // Send Heartbeat every ~15 seconds (every 3 cycles of 5s)
-                        if (loopCount % 3 == 0) {
-                            val hbRes = apiClient.sendHeartbeat(
-                                teacherId = teacherId,
-                                deviceId = deviceId,
-                                simNumber = simNumber,
-                                status = "ONLINE",
-                                batteryLevel = battery,
-                                networkStatus = netInfo.detail
-                            )
-                            if (hbRes != null) {
-                                Log.d(TAG, "Heartbeat ack received. Battery: $battery%, Net: ${netInfo.detail}")
-                            } else {
-                                Log.w(TAG, "Heartbeat missed response (Backend unreachable)")
-                            }
+                    if (regRes != null && (regRes.optBoolean("success") || regRes.has("deviceId"))) {
+                        val token = regRes.optString("deviceToken", "")
+                        if (token.isNotEmpty()) {
+                            preferenceManager.saveDeviceToken(token)
                         }
+                        log("🟢 DEVICE ONLINE & REGISTERED! Gateway ID: $deviceId")
+                        notifyStatus("ONLINE")
+                        updateNotification("ONLINE • Gateway connected & listening")
 
-                        // Poll Backend for Call Commands
-                        val pollRes = apiClient.pollPendingCalls(deviceId, teacherId)
-                        if (pollRes != null && pollRes.optBoolean("success")) {
-                            val calls = pollRes.optJSONArray("calls")
-                            if (calls != null && calls.length() > 0) {
-                                val callObj = calls.getJSONObject(0)
-                                executeOutboundCall(callObj)
+                        // Inner active loop once registered
+                        while (isRunning && isActive) {
+                            try {
+                                val battery = SimUtils.getBatteryLevel(this@SimGatewayService)
+                                val netInfo = SimUtils.getNetworkInformation(this@SimGatewayService)
+
+                                // Send Heartbeat every ~15 seconds (every 3 cycles of 5s)
+                                if (loopCount % 3 == 0) {
+                                    val hbRes = apiClient.sendHeartbeat(
+                                        teacherId = teacherId,
+                                        deviceId = deviceId,
+                                        simNumber = simNumber,
+                                        status = "ONLINE",
+                                        batteryLevel = battery,
+                                        networkStatus = netInfo.detail
+                                    )
+                                    if (hbRes != null) {
+                                        Log.d(TAG, "Heartbeat ack received. Battery: $battery%, Net: ${netInfo.detail}")
+                                    } else {
+                                        Log.w(TAG, "Heartbeat missed response (Backend unreachable)")
+                                    }
+                                }
+
+                                // Poll Backend for Call Commands
+                                val pollRes = apiClient.pollPendingCalls(deviceId, teacherId)
+                                if (pollRes != null && pollRes.optBoolean("success")) {
+                                    val calls = pollRes.optJSONArray("calls")
+                                    if (calls != null && calls.length() > 0) {
+                                        val callObj = calls.getJSONObject(0)
+                                        executeOutboundCall(callObj)
+                                    }
+                                }
+
+                            } catch (e: Exception) {
+                                log("⚠️ Communication error: ${e.message}")
                             }
-                        }
 
-                    } catch (e: Exception) {
-                        log("⚠️ Communication error: ${e.message}")
+                            loopCount++
+                            delay(5000) // Poll every 5 seconds
+                        }
+                    } else {
+                        val errDetail = regRes?.optString("error") ?: "Server response check failed"
+                        log("⚠️ Registration status: $errDetail. Retrying in 5s...")
+                        notifyStatus("CONNECTING")
+                        updateNotification("CONNECTING • Retrying registration...")
                     }
-
-                    loopCount++
-                    delay(5000) // Poll every 5 seconds
+                } catch (e: Exception) {
+                    log("⚠️ Loop exception: ${e.message}")
                 }
-            } else {
-                log("❌ Device registration failed. Verify Backend URL & Teacher ID.")
-                notifyStatus("OFFLINE")
-                updateNotification("OFFLINE • Registration Failed")
-                stopGateway()
+
+                delay(5000)
             }
         }
     }

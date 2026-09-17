@@ -41,7 +41,7 @@
             android:name=".SimGatewayService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="dataSync" />
+            android:foregroundServiceType="phoneCall|dataSync" />
 
     </application>
 

@@ -191,13 +191,22 @@ class MainActivity : AppCompatActivity() {
             putExtra("simNumber", phoneNum)
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+        } catch (e: Throwable) {
+            android.util.Log.e("MainActivity", "Error starting service: ${e.message}")
         }
 
-        bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        try {
+            bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        } catch (e: Throwable) {
+            android.util.Log.e("MainActivity", "Error binding service: ${e.message}")
+        }
+
         appendLog("Initiating SIM Gateway background service...")
     }
 
@@ -242,13 +251,26 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun appendLog(msg: String) {
-        val timeStr = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-        tvLogs.append("\n[$timeStr] $msg")
+        try {
+            val timeStr = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+            tvLogs.append("\n[$timeStr] $msg")
 
-        // Auto scroll to bottom
-        val scrollAmount = tvLogs.layout?.getLineTop(tvLogs.lineCount)?.minus(tvLogs.height) ?: 0
-        if (scrollAmount > 0) {
-            tvLogs.scrollTo(0, scrollAmount)
+            tvLogs.post {
+                try {
+                    val layout = tvLogs.layout
+                    if (layout != null && tvLogs.lineCount > 0) {
+                        val lineTop = layout.getLineTop(Math.min(tvLogs.lineCount, layout.lineCount - 1))
+                        val scrollAmount = lineTop - tvLogs.height
+                        if (scrollAmount > 0) {
+                            tvLogs.scrollTo(0, scrollAmount)
+                        }
+                    }
+                } catch (e: Throwable) {
+                    // Safe catch layout scroll exceptions
+                }
+            }
+        } catch (e: Throwable) {
+            android.util.Log.e("MainActivity", "Error appending log: ${e.message}")
         }
     }
 }
