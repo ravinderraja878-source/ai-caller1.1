@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AI Caller SIM Gateway</string>
+    <string name="subtitle">Connect your Android physical SIM card to Vercel Backend</string>
+    <string name="backend_url_label">Backend URL (Vercel)</string>
+    <string name="teacher_id_label">Teacher Account ID</string>
+    <string name="sim_number_label">My SIM Phone Number</string>
+    <string name="gateway_id_label">Gateway / Device ID</string>
+    <string name="status_offline">🔴 OFFLINE</string>
+    <string name="status_connecting">🟡 CONNECTING...</string>
+    <string name="status_online">🟢 ONLINE</string>
+    <string name="btn_connect">Connect Gateway</string>
+    <string name="btn_disconnect">Disconnect Gateway</string>
+    <string name="logs_title">Live Gateway &amp; Call Logs</string>
+    <string name="sim_info_title">Device &amp; SIM Card Status</string>
+</resources>

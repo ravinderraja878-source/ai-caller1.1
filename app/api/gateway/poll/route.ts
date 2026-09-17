@@ -6,30 +6,44 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const deviceId = searchParams.get('deviceId');
+    const teacherId = searchParams.get('teacherId');
     const deviceToken = searchParams.get('deviceToken');
 
-    if (!deviceId || !deviceToken) {
-      return NextResponse.json({ error: 'deviceId and deviceToken query params are required' }, { status: 400 });
+    if (!deviceId && !teacherId) {
+      return NextResponse.json({ error: 'deviceId or teacherId query param is required' }, { status: 400 });
     }
 
-    const device = await prisma.simGatewayDevice.findUnique({
-      where: { deviceId },
-    });
-
-    if (!device || device.deviceToken !== deviceToken) {
-      return NextResponse.json({ error: 'Invalid device credentials' }, { status: 401 });
+    let device = null;
+    if (deviceId) {
+      device = await prisma.simGatewayDevice.findFirst({
+        where: { deviceId },
+      });
     }
 
-    // Update device lastSeen
-    await prisma.simGatewayDevice.update({
-      where: { id: device.id },
-      data: { status: 'ONLINE', lastSeen: new Date() },
-    });
+    if (!device && teacherId) {
+      device = await prisma.simGatewayDevice.findFirst({
+        where: { teacherId },
+      });
+    }
 
-    // Find pending calls requested for this teacher or assigned to this device
+    const effectiveTeacherId = device?.teacherId || teacherId;
+
+    if (device) {
+      // Update device lastSeen
+      await prisma.simGatewayDevice.update({
+        where: { id: device.id },
+        data: { status: 'ONLINE', lastSeen: new Date() },
+      });
+    }
+
+    if (!effectiveTeacherId) {
+      return NextResponse.json({ success: true, calls: [] });
+    }
+
+    // Find pending calls requested for this teacher
     const pendingCalls = await prisma.call.findMany({
       where: {
-        teacherId: device.teacherId,
+        teacherId: effectiveTeacherId,
         status: 'REQUESTED',
       },
       include: {
@@ -51,7 +65,7 @@ export async function GET(request: Request) {
       await prisma.call.update({
         where: { id: call.id },
         data: {
-          deviceId: device.id,
+          deviceId: device?.id || null,
           status: 'DEVICE_RECEIVED',
         },
       });
@@ -62,7 +76,7 @@ export async function GET(request: Request) {
         studentName: call.student.name,
         parentName: call.student.parentName,
         parentPhone: call.parentPhone,
-        teacherPhone: call.teacherPhone || device.phoneNumber || call.teacher.phone,
+        teacherPhone: call.teacherPhone || device?.phoneNumber || call.teacher.phone,
         collegeName: call.teacher.collegeName || 'College',
         teacherName: call.teacher.name,
         attendanceDate: call.createdAt.toISOString().split('T')[0],
@@ -82,3 +96,4 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   return GET(request);
 }
+

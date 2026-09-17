@@ -10,9 +10,10 @@ import java.util.concurrent.TimeUnit
 class ApiClient(private var baseUrl: String) {
 
     private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .writeTimeout(15, TimeUnit.SECONDS)
+        .connectTimeout(12, TimeUnit.SECONDS)
+        .readTimeout(12, TimeUnit.SECONDS)
+        .writeTimeout(12, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
         .build()
 
     private val jsonMediaType = "application/json; charset=utf-8".toMediaType()
@@ -28,84 +29,127 @@ class ApiClient(private var baseUrl: String) {
         this.baseUrl = cleanUrl
     }
 
-    fun registerDevice(teacherId: String, deviceName: String, phoneNumber: String): JSONObject? {
+    fun registerDevice(
+        teacherId: String,
+        deviceId: String,
+        simNumber: String
+    ): JSONObject? {
         val payload = JSONObject().apply {
             put("teacherId", teacherId)
-            put("deviceName", deviceName)
-            put("phoneNumber", phoneNumber)
+            put("deviceId", deviceId)
+            put("simNumber", simNumber)
+            put("platform", "android")
+            put("deviceModel", android.os.Build.MODEL)
+            put("manufacturer", android.os.Build.MANUFACTURER)
+            put("sdkVersion", android.os.Build.VERSION.SDK_INT)
         }
+
         val request = Request.Builder()
             .url("$baseUrl/api/gateway/register")
             .post(payload.toString().toRequestBody(jsonMediaType))
             .build()
 
-        client.newCall(request).execute().use { response ->
-            if (response.isSuccessful) {
-                return JSONObject(response.body?.string() ?: "{}")
+        return try {
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val responseStr = response.body?.string() ?: "{}"
+                    JSONObject(responseStr)
+                } else {
+                    null
+                }
             }
+        } catch (e: Exception) {
+            null
         }
-        return null
     }
 
-    fun sendHeartbeat(deviceId: String, deviceToken: String, phoneNumber: String): JSONObject? {
+    fun sendHeartbeat(
+        teacherId: String,
+        deviceId: String,
+        simNumber: String,
+        status: String,
+        batteryLevel: Int,
+        networkStatus: String
+    ): JSONObject? {
         val payload = JSONObject().apply {
+            put("teacherId", teacherId)
             put("deviceId", deviceId)
-            put("deviceToken", deviceToken)
-            put("phoneNumber", phoneNumber)
-            put("status", "ONLINE")
+            put("simNumber", simNumber)
+            put("status", status)
+            put("batteryLevel", batteryLevel)
+            put("networkStatus", networkStatus)
+            put("timestamp", System.currentTimeMillis())
         }
+
         val request = Request.Builder()
             .url("$baseUrl/api/gateway/heartbeat")
             .post(payload.toString().toRequestBody(jsonMediaType))
             .build()
 
-        client.newCall(request).execute().use { response ->
-            if (response.isSuccessful) {
-                return JSONObject(response.body?.string() ?: "{}")
+        return try {
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val responseStr = response.body?.string() ?: "{}"
+                    JSONObject(responseStr)
+                } else {
+                    null
+                }
             }
+        } catch (e: Exception) {
+            null
         }
-        return null
     }
 
-    fun pollPendingCalls(deviceId: String, deviceToken: String): JSONObject? {
+    fun pollPendingCalls(deviceId: String, teacherId: String): JSONObject? {
+        val url = "$baseUrl/api/gateway/poll?deviceId=$deviceId&teacherId=$teacherId"
         val request = Request.Builder()
-            .url("$baseUrl/api/gateway/poll?deviceId=$deviceId&deviceToken=$deviceToken")
+            .url(url)
             .get()
             .build()
 
-        client.newCall(request).execute().use { response ->
-            if (response.isSuccessful) {
-                return JSONObject(response.body?.string() ?: "{}")
+        return try {
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val responseStr = response.body?.string() ?: "{}"
+                    JSONObject(responseStr)
+                } else {
+                    null
+                }
             }
+        } catch (e: Exception) {
+            null
         }
-        return null
     }
 
     fun updateCallStatus(
-        deviceId: String,
-        deviceToken: String,
         callId: String,
+        deviceId: String,
         status: String,
         duration: Int = 0,
-        parentResponse: String? = null,
         failureReason: String? = null
     ): Boolean {
         val payload = JSONObject().apply {
-            put("deviceId", deviceId)
-            put("deviceToken", deviceToken)
             put("callId", callId)
+            put("deviceId", deviceId)
             put("status", status)
             put("duration", duration)
-            if (parentResponse != null) put("parentResponse", parentResponse)
-            if (failureReason != null) put("failureReason", failureReason)
+            if (failureReason != null) {
+                put("failureReason", failureReason)
+            }
+            put("timestamp", System.currentTimeMillis())
         }
+
         val request = Request.Builder()
             .url("$baseUrl/api/gateway/call-status")
             .post(payload.toString().toRequestBody(jsonMediaType))
             .build()
 
-        client.newCall(request).execute().use { response ->
-            return response.isSuccessful
+        return try {
+            client.newCall(request).execute().use { response ->
+                response.isSuccessful
+            }
+        } catch (e: Exception) {
+            false
         }
     }
 }

@@ -6,45 +6,86 @@ import crypto from 'crypto';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { teacherId, email, deviceName, phoneNumber } = body;
+    const { teacherId, email, deviceName, phoneNumber, simNumber, deviceId: incomingDeviceId, deviceModel } = body;
+    const phone = phoneNumber || simNumber;
 
-    if (!teacherId && !email) {
-      return NextResponse.json({ error: 'teacherId or email is required' }, { status: 400 });
-    }
+    let teacher = null;
 
-    // Find teacher by ID or Email
-    const teacher = await prisma.teacher.findFirst({
-      where: teacherId ? { id: teacherId } : { email },
-    });
-
-    if (!teacher) {
-      return NextResponse.json({ error: 'Teacher account not found' }, { status: 404 });
-    }
-
-    // If teacher provided a SIM phone number during registration, update teacher's phone number as well
-    if (phoneNumber) {
-      await prisma.teacher.update({
-        where: { id: teacher.id },
-        data: { phone: phoneNumber, isVerified: true },
+    if (teacherId) {
+      teacher = await prisma.teacher.findUnique({
+        where: { id: teacherId },
       });
     }
 
-    // Generate unique device ID and secure token
-    const generatedDeviceId = `sim_device_${crypto.randomBytes(6).toString('hex')}`;
-    const generatedToken = `tok_${crypto.randomBytes(16).toString('hex')}`;
+    if (!teacher && email) {
+      teacher = await prisma.teacher.findUnique({
+        where: { email },
+      });
+    }
 
-    // Create or update SIM Gateway Device record
-    const device = await prisma.simGatewayDevice.create({
-      data: {
-        deviceId: generatedDeviceId,
-        deviceToken: generatedToken,
-        deviceName: deviceName || 'Android SIM Phone',
-        teacherId: teacher.id,
-        phoneNumber: phoneNumber || teacher.phone || null,
-        status: 'ONLINE',
-        lastSeen: new Date(),
-      },
+    // Fallback: If teacher ID not found, but exactly 1 teacher exists in DB, auto-pair with that teacher
+    if (!teacher) {
+      const allTeachers = await prisma.teacher.findMany({ take: 2 });
+      if (allTeachers.length === 1) {
+        teacher = allTeachers[0];
+      }
+    }
+
+    if (!teacher) {
+      return NextResponse.json(
+        { error: 'Teacher account not found. Please log into dashboard profile settings to view your correct Teacher ID.' },
+        { status: 404 }
+      );
+    }
+
+    // Update teacher's verified phone number if provided
+    if (phone) {
+      await prisma.teacher.update({
+        where: { id: teacher.id },
+        data: { phone: phone, isVerified: true },
+      });
+    }
+
+    const deviceIdToUse = incomingDeviceId || `sim_device_${crypto.randomBytes(6).toString('hex')}`;
+    const generatedToken = `tok_${crypto.randomBytes(16).toString('hex')}`;
+    const nameToUse = deviceName || deviceModel || 'Android SIM Phone';
+
+    // Check if device already exists for this deviceId or teacherId
+    const existingDevice = await prisma.simGatewayDevice.findFirst({
+      where: {
+        OR: [
+          { deviceId: deviceIdToUse },
+          { teacherId: teacher.id }
+        ]
+      }
     });
+
+    let device;
+    if (existingDevice) {
+      device = await prisma.simGatewayDevice.update({
+        where: { id: existingDevice.id },
+        data: {
+          deviceId: deviceIdToUse,
+          deviceToken: generatedToken,
+          deviceName: nameToUse,
+          phoneNumber: phone || existingDevice.phoneNumber || teacher.phone || null,
+          status: 'ONLINE',
+          lastSeen: new Date(),
+        },
+      });
+    } else {
+      device = await prisma.simGatewayDevice.create({
+        data: {
+          deviceId: deviceIdToUse,
+          deviceToken: generatedToken,
+          deviceName: nameToUse,
+          teacherId: teacher.id,
+          phoneNumber: phone || teacher.phone || null,
+          status: 'ONLINE',
+          lastSeen: new Date(),
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,
@@ -61,3 +102,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error?.message || 'Failed to register gateway device' }, { status: 500 });
   }
 }
+

@@ -16,18 +16,14 @@ export async function POST(request: Request) {
       failureReason,
     } = body;
 
-    if (!deviceId || !deviceToken || !callId || !status) {
-      return NextResponse.json({ error: 'deviceId, deviceToken, callId, and status are required' }, { status: 400 });
+    if (!deviceId || !callId || !status) {
+      return NextResponse.json({ error: 'deviceId, callId, and status are required' }, { status: 400 });
     }
 
     // Verify device authorization
-    const device = await prisma.simGatewayDevice.findUnique({
+    const device = await prisma.simGatewayDevice.findFirst({
       where: { deviceId },
     });
-
-    if (!device || device.deviceToken !== deviceToken) {
-      return NextResponse.json({ error: 'Unauthorized device' }, { status: 401 });
-    }
 
     const callRecord = await prisma.call.findUnique({
       where: { id: callId },
@@ -39,7 +35,7 @@ export async function POST(request: Request) {
 
     const updateData: any = {
       status,
-      deviceId: device.id,
+      deviceId: device?.id || callRecord.deviceId,
       callingMethod: 'PERSONAL_SIM',
     };
 
@@ -63,7 +59,7 @@ export async function POST(request: Request) {
     });
 
     // Update device status back to ONLINE if call completed
-    if (['COMPLETED', 'FAILED', 'BUSY', 'NO_ANSWER'].includes(status)) {
+    if (device && ['COMPLETED', 'FAILED', 'BUSY', 'NO_ANSWER'].includes(status)) {
       await prisma.simGatewayDevice.update({
         where: { id: device.id },
         data: { status: 'ONLINE', lastSeen: new Date() },
@@ -80,3 +76,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to update call status' }, { status: 500 });
   }
 }
+

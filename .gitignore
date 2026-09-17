@@ -36,3 +36,12 @@ next-env.d.ts
 # prisma dev db
 prisma/*.db
 prisma/*.db-journal
+
+# android build ignores
+.gradle/
+.idea/
+local.properties
+**/build/
+**/bin/
+*.apk
+
