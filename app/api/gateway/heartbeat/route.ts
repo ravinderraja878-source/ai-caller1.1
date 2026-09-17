@@ -28,6 +28,26 @@ export async function POST(request: Request) {
     }
 
     if (!device) {
+      const teacher = teacherId
+        ? await prisma.teacher.findUnique({ where: { id: teacherId } })
+        : await prisma.teacher.findFirst();
+
+      if (teacher) {
+        device = await prisma.simGatewayDevice.create({
+          data: {
+            deviceId: deviceId || `sim_device_${Math.random().toString(36).substring(2, 10)}`,
+            deviceToken: deviceToken || `tok_${Math.random().toString(36).substring(2, 10)}`,
+            deviceName: 'Android SIM Phone',
+            teacherId: teacher.id,
+            phoneNumber: phone || teacher.phone || null,
+            status: 'ONLINE',
+            lastSeen: new Date(),
+          },
+        });
+      }
+    }
+
+    if (!device) {
       return NextResponse.json({ error: 'Device record not found. Please register device first.' }, { status: 404 });
     }
 
