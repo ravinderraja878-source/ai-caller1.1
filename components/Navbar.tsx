@@ -42,11 +42,11 @@ export function Navbar({ setMobileOpen, teacher, voiceMode = 'mock' }: NavbarPro
           className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${
             voiceMode === 'production' || voiceMode === 'personal_sim'
               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-              : 'bg-amber-50 text-amber-800 border border-amber-200'
+              : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
           }`}
         >
-          <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-          <span>{voiceMode === 'production' || voiceMode === 'personal_sim' ? 'Personal SIM Active' : 'Demo Mode Active'}</span>
+          <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+          <span>{voiceMode === 'production' || voiceMode === 'personal_sim' ? 'Personal SIM Active' : 'Voice Gateway Active'}</span>
         </div>
 
         {/* User Info Avatar */}

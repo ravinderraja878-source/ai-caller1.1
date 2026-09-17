@@ -90,11 +90,11 @@ export function Sidebar({ mobileOpen, setMobileOpen, voiceMode = 'mock' }: Sideb
             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
               voiceMode === 'production' || voiceMode === 'personal_sim'
                 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30'
             }`}
           >
             <Sparkles className="h-3 w-3" />
-            {voiceMode === 'production' || voiceMode === 'personal_sim' ? 'Personal SIM' : 'Demo Mode'}
+            {voiceMode === 'production' || voiceMode === 'personal_sim' ? 'Personal SIM' : 'Voice Gateway'}
           </span>
         </div>
 
